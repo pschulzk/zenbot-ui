@@ -1,0 +1,15 @@
+{
+  "name": "zenbot-ui",
+  "version": "1.0.0",
+  "description": "Management UI for Zenbot",
+  "main": "index.html",
+  "scripts": {
+    "test": "test"
+  },
+  "keywords": [
+    "zenbot"
+  ],
+  "author": "Philip Schulz-Klingauf",
+  "license": "MIT",
+  "dependencies": {}
+}

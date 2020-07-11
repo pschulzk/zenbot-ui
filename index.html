@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Zenbot UI</title>
+
+    <script>
+        // CONFIG
+        const VERSION = '0.0.1';
+        const URL = 'http://localhost:8082';
+        const FILE_NAMES = [
+            'stddev.html',
+            'trend_ema.html',
+        ];
+    </script>
+</head>
+<body class="bg-dark">
+    <div class="container-fluid main">
+        <div class="row">
+            <h1 class="col-md-10 text-white">Zenbot</h1>
+            <p class="col-md-2 text-white text-right">Version: <span id="version-label"></span></p>
+        </div>
+
+        <form class="row">
+            <div class="offset-md-10 col-md-2">
+                <div class="input-group input-group-sm mb-3">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="input-grid-cols-per-row">Columns per Row</label>
+                    </div>
+                    <input
+                        type="number"
+                        step="1"
+                        maxlength="2"
+                        min="1"
+                        max="12"
+                        id="input-grid-cols-per-row"
+                        class="form-control input-sm"
+                        aria-label="Columns per Row"
+                        aria-describedby="input-grid-cols-per-row"
+                    >
+                </div>
+            </div>
+        </form>
+
+        <div class="row">
+            <div id="container-instances" class="col-md-12">
+                <p class="text-white text-center">No files to read</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <script type="text/javascript">
+        'use strict';
+
+        $(document).ready(function() {
+
+            // VARIABLES
+            let appData = {
+                appVersion: VERSION || 'No version info configured',
+                fileNames: FILE_NAMES || [],
+                inputGridColsPerRow: 3,
+            };
+            let readOnlyElements = {
+                versionLabel: $('#version-label'),
+                containerInstances: $('#container-instances'),
+            };
+            let inputElements = {
+                inputGridColsPerRow: $('#input-grid-cols-per-row'),
+            };
+
+            // FUNCTIONS
+            let initInputElementsOnChange = () => {
+                console.log(`AppData:`, appData);
+            }
+            let initInputElements = () => {
+                Object.getOwnPropertyNames(inputElements).forEach(key => {
+                    // preset input data
+                    inputElements[key].val(appData[key]);
+                    // make data listening to inputs
+                    inputElements[key].on('change', data => {
+                        appData[key] = data.currentTarget.value;
+                        initInputElementsOnChange();
+                    });
+                });
+            };
+            let getFileName = (n) => n.substr(0, n.length - 5);
+            let createRowContent = (fileNameArray, colSize) => {
+                return fileNameArray.map((fileName, idx) => {
+                    let name = getFileName(fileName);
+                    let colHeight = Math.floor(colSize / 1.3 * 100) + 'px';
+                    return $('<div/>', {
+                        id: 'instance-' + name,
+                        class: 'col-md-' + colSize,
+                    })
+                    .append($('<a/>', {
+                        href: '/' + fileName,
+                        text: name,
+                        class: 'col-md-12 text-white',
+                    }))
+                    .append(
+                        $('<iframe>', {
+                            src: URL + '/' + fileName,
+                            frameborder: 0,
+                            scrolling: 'no',
+                            id:  'instance-' + name,
+                            class: 'col-md-12',
+                        }).css('height', colHeight)
+                    );
+                });
+            };
+            let createRow = (fileNameArray) => {
+                let colSize = Math.round(12 / fileNameArray.length);
+                let row = $('<div/>', {
+                    class: 'row',
+                });
+                createRowContent(fileNameArray, colSize).forEach(element => {
+                    element.appendTo(row);
+                });
+                return row;
+            };
+            let createRows = (fileNameArray, colsPerRow) => {
+                let rowsArray = new Array();
+                fileNameArray.forEach((fileName, idx) => {
+                    if (idx % colsPerRow === 0) {
+                        rowsArray.push([]);
+                    }
+                    rowsArray[rowsArray.length - 1].push(fileName);
+                });
+                return rowsArray.map(fileNames => createRow(fileNames));
+            };
+            let createRowGridFromFilenamesInElement = (elem, fileNameArray, colsPerRow) => {
+                if (fileNameArray.length === 0) {
+                    return;
+                }
+                elem.html('');
+                let rows = createRows(fileNameArray, colsPerRow);
+                rows.forEach(row => row.appendTo(elem));
+            };
+            // override onChange
+            initInputElementsOnChange = () => {
+                createRowGridFromFilenamesInElement(readOnlyElements.containerInstances, appData.fileNames, appData.inputGridColsPerRow);
+            }
+            let initApp = () => {
+                console.log(`Welcome to Zenbot UI v${appData.appVersion} | Host URL: ${URL} | File Index:`, appData.fileNames);
+                // display version
+                readOnlyElements.versionLabel.text(VERSION);
+                // init input elements
+                initInputElements();
+                // create grid
+                createRowGridFromFilenamesInElement(readOnlyElements.containerInstances, appData.fileNames, appData.inputGridColsPerRow);
+            };
+
+            // INIT APP
+            initApp();
+
+        });
+    </script>
+</body>
+</html>
